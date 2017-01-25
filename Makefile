@@ -1,6 +1,6 @@
 VERSION = 3
 PATCHLEVEL = 18
-SUBLEVEL = 37
+SUBLEVEL = 40
 EXTRAVERSION =
 NAME = Shuffling Zombie Juror
 
@@ -377,6 +377,7 @@ LDFLAGS_MODULE  =
 CFLAGS_KERNEL	=
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
+CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
 
 
 # Use USERINCLUDE when you must reference the UAPI directories only.

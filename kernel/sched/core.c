@@ -2740,6 +2740,36 @@ unsigned long nr_iowait_cpu(int cpu)
 	return atomic_read(&this->nr_iowait);
 }
 
+#ifdef CONFIG_CPU_QUIET
+u64 nr_running_integral(unsigned int cpu)
+{
+	unsigned int seqcnt;
+	u64 integral;
+	struct rq *q;
+
+	if (cpu >= nr_cpu_ids)
+		return 0;
+
+	q = cpu_rq(cpu);
+
+	/*
+	 * Update average to avoid reading stalled value if there were
+	 * no run-queue changes for a long time. On the other hand if
+	 * the changes are happening right now, just read current value
+	 * directly.
+	 */
+
+	seqcnt = read_seqcount_begin(&q->ave_seqcnt);
+	integral = do_nr_running_integral(q);
+	if (read_seqcount_retry(&q->ave_seqcnt, seqcnt)) {
+		read_seqcount_begin(&q->ave_seqcnt);
+		integral = q->nr_running_integral;
+	}
+
+	return integral;
+}
+#endif
+
 void get_iowait_load(unsigned long *nr_waiters, unsigned long *load)
 {
 	struct rq *rq = this_rq();
@@ -2846,16 +2876,13 @@ unsigned long sum_capacity_reqs(unsigned long cfs_cap,
 
 static void sched_freq_tick_pelt(int cpu)
 {
-	unsigned long cpu_utilization = cpu_util(cpu, UTIL_EST);
+	unsigned long cpu_utilization = capacity_max;
 	unsigned long capacity_curr = capacity_curr_of(cpu);
 	struct sched_capacity_reqs *scr;
 
 	scr = &per_cpu(cpu_sched_capacity_reqs, cpu);
 	if (sum_capacity_reqs(cpu_utilization, scr) < capacity_curr)
 		return;
-
-	if (!use_util_est())
-		cpu_utilization = capacity_max;
 
 	/*
 	 * To make free room for a task that is building up its "real"
@@ -2869,7 +2896,7 @@ static void sched_freq_tick_pelt(int cpu)
 #ifdef CONFIG_SCHED_WALT
 static void sched_freq_tick_walt(int cpu)
 {
-	unsigned long cpu_utilization = cpu_util(cpu, UTIL_EST);
+	unsigned long cpu_utilization = cpu_util(cpu);
 	unsigned long capacity_curr = capacity_curr_of(cpu);
 
 	if (walt_disabled || !sysctl_sched_use_walt_cpu_util)
@@ -5003,13 +5030,15 @@ void show_state_filter(unsigned long state_filter)
 		/*
 		 * reset the NMI-timeout, listing all files on a slow
 		 * console might take a lot of time:
+		 * Also, reset softlockup watchdogs on all CPUs, because
+		 * another CPU might be blocked waiting for us to process
+		 * an IPI.
 		 */
 		touch_nmi_watchdog();
+		touch_all_softlockup_watchdogs();
 		if (!state_filter || (p->state & state_filter))
 			sched_show_task(p);
 	}
-
-	touch_all_softlockup_watchdogs();
 
 #ifdef CONFIG_SCHED_DEBUG
 	sysrq_sched_debug_show();
@@ -7526,8 +7555,6 @@ void __init sched_init(void)
 		rq->idle_stamp = 0;
 		rq->avg_idle = 2*sysctl_sched_migration_cost;
 		rq->max_idle_balance_cost = sysctl_sched_migration_cost;
-		rq->cstate = 0;
-		rq->wakeup_latency = 0;
 #ifdef CONFIG_SCHED_WALT
 		rq->cur_irqload = 0;
 		rq->avg_irqload = 0;

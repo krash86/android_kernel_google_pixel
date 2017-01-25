@@ -173,6 +173,9 @@ extern bool single_task_running(void);
 extern unsigned long nr_iowait(void);
 extern unsigned long nr_iowait_cpu(int cpu);
 extern void get_iowait_load(unsigned long *nr_waiters, unsigned long *load);
+#ifdef CONFIG_CPU_QUIET
+extern u64 nr_running_integral(unsigned int cpu);
+#endif
 
 extern void calc_global_load(unsigned long ticks);
 
@@ -1135,7 +1138,7 @@ struct load_weight {
 struct sched_avg {
 	u64 last_update_time, load_sum;
 	u32 util_sum, period_contrib;
-	unsigned long load_avg, util_avg, util_est;
+	unsigned long load_avg, util_avg;
 };
 
 #ifdef CONFIG_SCHEDSTATS
@@ -1345,9 +1348,6 @@ struct task_struct {
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
-	struct related_thread_group *grp;
-	struct list_head grp_list;
-
 #ifdef CONFIG_SCHED_WALT
 	struct ravg ravg;
 	/*
