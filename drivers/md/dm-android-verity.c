@@ -267,10 +267,7 @@ static inline int validate_fec_header(struct fec_header *header, u64 offset)
 		le32_to_cpu(header->version) != FEC_VERSION ||
 		le32_to_cpu(header->size) != sizeof(struct fec_header) ||
 		le32_to_cpu(header->roots) == 0 ||
-		le32_to_cpu(header->roots) >= FEC_RSM ||
-		offset < le32_to_cpu(header->fec_size) ||
-		offset - le32_to_cpu(header->fec_size) !=
-		le64_to_cpu(header->inp_size))
+		le32_to_cpu(header->roots) >= FEC_RSM)
 		return -EINVAL;
 
 	return 0;
@@ -368,8 +365,6 @@ static int find_size(dev_t dev, u64 *device_size)
 static int verify_header(struct android_metadata_header *header)
 {
 	int retval = -EINVAL;
-
-	return VERITY_STATE_DISABLE; // permanently disable verity﻿
 
 	if (is_userdebug() && le32_to_cpu(header->magic_number) ==
 			VERITY_METADATA_MAGIC_DISABLE)

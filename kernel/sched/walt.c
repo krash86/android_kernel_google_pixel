@@ -22,6 +22,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/cpufreq.h>
 #include <trace/events/sched.h>
+#include <clocksource/arm_arch_timer.h>
 #include "sched.h"
 #include "walt.h"
 
@@ -178,7 +179,6 @@ static int __init set_walt_ravg_window(char *str)
 
 early_param("walt_ravg_window", set_walt_ravg_window);
 
-extern u64 arch_counter_get_cntpct(void);
 static void
 update_window_start(struct rq *rq, u64 wallclock)
 {
@@ -188,7 +188,7 @@ update_window_start(struct rq *rq, u64 wallclock)
 	delta = wallclock - rq->window_start;
 	/* If the MPM global timer is cleared, set delta as 0 to avoid kernel BUG happening */
 	if (delta < 0) {
-		if (arch_counter_get_cntpct() == 0)
+		if (arch_timer_read_counter() == 0)
 			delta = 0;
 		else
 			BUG_ON(1);
