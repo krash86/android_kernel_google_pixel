@@ -86,7 +86,6 @@ static inline void flush_tlb_mm(struct mm_struct *mm)
 	dsb(ishst);
 	asm("tlbi	aside1is, %0" : : "r" (asid));
 	dsb(ish);
-#endif
 }
 
 static inline void flush_tlb_page(struct vm_area_struct *vma,
@@ -97,7 +96,6 @@ static inline void flush_tlb_page(struct vm_area_struct *vma,
 	dsb(ishst);
 	asm("tlbi	vale1is, %0" : : "r" (addr));
 	dsb(ish);
-#endif
 }
 
 /*
