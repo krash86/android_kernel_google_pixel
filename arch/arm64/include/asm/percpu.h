@@ -16,8 +16,6 @@
 #ifndef __ASM_PERCPU_H
 #define __ASM_PERCPU_H
 
-#ifdef CONFIG_SMP
-
 static inline void set_my_cpu_offset(unsigned long off)
 {
 	asm volatile("msr tpidr_el1, %0" :: "r" (off) : "memory");

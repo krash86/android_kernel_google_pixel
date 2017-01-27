@@ -42,11 +42,13 @@
 
 #include "mm.h"
 
+u64 idmap_t0sz = TCR_T0SZ(VA_BITS);
+
 /*
  * Empty_zero_page is a special page that is used for zero-initialized data
  * and COW.
  */
-struct page *empty_zero_page;
+unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)] __page_aligned_bss;
 EXPORT_SYMBOL(empty_zero_page);
 
 struct cachepolicy {
@@ -241,8 +243,14 @@ static void alloc_init_pmd(struct mm_struct *mm, pud_t *pud,
 			 * Check for previous table entries created during
 			 * boot (__create_page_tables) and flush them.
 			 */
-			if (!pmd_none(old_pmd))
+			if (!pmd_none(old_pmd)) {
 				flush_tlb_all();
+				if (pmd_table(old_pmd)) {
+					phys_addr_t table = __pa(pte_offset_map(&old_pmd, 0));
+					if (!WARN_ON_ONCE(slab_is_available()))
+						memblock_free(table, PAGE_SIZE);
+				}
+			}
 		} else {
 			alloc_init_pte(pmd, addr, next, __phys_to_pfn(phys),
 				       prot, alloc);
@@ -300,9 +308,12 @@ static void alloc_init_pud(struct mm_struct *mm, pgd_t *pgd,
 			 * Look up the old pmd table and free it.
 			 */
 			if (!pud_none(old_pud)) {
-				phys_addr_t table = __pa(pmd_offset(&old_pud, 0));
-				memblock_free(table, PAGE_SIZE);
 				flush_tlb_all();
+				if (pud_table(old_pud)) {
+					phys_addr_t table = __pa(pmd_offset(&old_pud, 0));
+					if (!WARN_ON_ONCE(slab_is_available()))
+						memblock_free(table, PAGE_SIZE);
+				}
 			}
 		} else {
 			alloc_init_pmd(mm, pud, addr, next, phys, prot, alloc, force_pages);
@@ -641,9 +652,8 @@ void __init fixup_executable(void)
 void mark_rodata_ro(void)
 {
 	create_mapping_late(__pa(_stext), (unsigned long)_stext,
-				(unsigned long)_etext - (unsigned long)_stext,
+				(unsigned long)__init_begin - (unsigned long)_stext,
 				PAGE_KERNEL_EXEC | PTE_RDONLY);
-
 }
 #endif
 
@@ -660,26 +670,12 @@ void fixup_init(void)
  */
 void __init paging_init(void)
 {
-	void *zero_page;
-
 	map_mem();
 	dma_contiguous_remap();
 	remap_pages();
 	fixup_executable();
 
-	/*
-	 * Finally flush the caches and tlb to ensure that we're in a
-	 * consistent state.
-	 */
-	flush_cache_all();
-	flush_tlb_all();
-
-	/* allocate the zero page. */
-	zero_page = early_alloc(PAGE_SIZE);
-
 	bootmem_init();
-
-	empty_zero_page = virt_to_page(zero_page);
 
 	/*
 	 * TTBR0 is only used for the identity mapping at this stage. Make it

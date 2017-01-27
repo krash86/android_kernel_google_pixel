@@ -47,6 +47,9 @@ static ktime_t last_monotime; /* monotonic time before last suspend */
 static ktime_t curr_monotime; /* monotonic time after last suspend */
 static ktime_t last_stime; /* monotonic boottime offset before last suspend */
 static ktime_t curr_stime; /* monotonic boottime offset after last suspend */
+#if IS_ENABLED(CONFIG_SUSPEND_TIME)
+static unsigned int time_in_suspend_bins[32];
+#endif
 
 static void init_wakeup_irq_node(struct wakeup_irq_node *p, int irq)
 {
@@ -544,6 +547,11 @@ void clear_wakeup_reasons(void)
 static int wakeup_reason_pm_event(struct notifier_block *notifier,
 		unsigned long pm_event, void *unused)
 {
+#if IS_ENABLED(CONFIG_SUSPEND_TIME)
+	ktime_t temp;
+	struct timespec suspend_time;
+#endif
+
 	switch (pm_event) {
 	case PM_SUSPEND_PREPARE:
 		spin_lock(&resume_reason_lock);
