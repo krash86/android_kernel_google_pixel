@@ -8440,7 +8440,6 @@ static void perf_event_start_swclock(int cpu)
 }
 #else
 static inline void perf_event_exit_cpu(int cpu) { }
-static inline void perf_event_start_swclock(int cpu) { }
 #endif
 
 static int

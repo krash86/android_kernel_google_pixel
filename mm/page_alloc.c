@@ -1391,27 +1391,6 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
 	return i;
 }
 
-/*
- * Return the pcp list that corresponds to the migrate type if that list isn't
- * empty.
- * If the list is empty return NULL.
- */
-static struct list_head *get_populated_pcp_list(struct zone *zone,
-			unsigned int order, struct per_cpu_pages *pcp,
-			int migratetype, int cold)
-{
-	struct list_head *list = &pcp->lists[migratetype];
-
-	if (list_empty(list)) {
-		pcp->count += rmqueue_bulk(zone, order,
-				pcp->batch, list,
-				migratetype, cold);
-
-		if (list_empty(list))
-			list = NULL;
-	}
-	return list;
-}
 
 #ifdef CONFIG_NUMA
 /*
@@ -1737,24 +1716,14 @@ again:
 
 		local_irq_save(flags);
 		pcp = &this_cpu_ptr(zone->pageset)->pcp;
-
-		/* First try to get CMA pages */
-		if (migratetype == MIGRATE_MOVABLE &&
-			gfp_flags & __GFP_CMA) {
-			list = get_populated_pcp_list(zone, 0, pcp,
-					get_cma_migrate_type(), cold);
-		}
-
-		if (list == NULL) {
-			/*
-			 * Either CMA is not suitable or there are no free CMA
-			 * pages.
-			 */
-			list = get_populated_pcp_list(zone, 0, pcp,
-				migratetype, cold);
-			if (unlikely(list == NULL) ||
-				unlikely(list_empty(list)))
+		list = &pcp->lists[migratetype];
+		if (list_empty(list)) {
+			pcp->count += rmqueue_bulk(zone, 0,
+					pcp->batch, list,
+					migratetype, cold);
+			if (unlikely(list_empty(list)))
 				goto failed;
+
 		}
 
 		if (cold)

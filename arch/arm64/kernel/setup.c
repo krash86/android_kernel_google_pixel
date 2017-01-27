@@ -39,7 +39,6 @@
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/memblock.h>
-#include <linux/of_address.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
 #include <linux/efi.h>
@@ -196,11 +195,7 @@ static void __init setup_machine_fdt(phys_addr_t dt_phys)
 			cpu_relax();
 	}
 
-	machine_name = of_flat_dt_get_machine_name();
-	if (machine_name) {
-		dump_stack_set_arch_desc("%s (DT)", machine_name);
-		pr_info("Machine: %s\n", machine_name);
-	}
+	dump_stack_set_arch_desc("%s (DT)", of_flat_dt_get_machine_name());
 }
 
 static void __init request_standard_resources(void)
@@ -295,8 +290,6 @@ static inline void __init relocate_initrd(void)
 #endif
 
 u64 __cpu_logical_map[NR_CPUS] = { [0 ... NR_CPUS-1] = INVALID_HWID };
-
-void __init __weak init_random_pool(void) { }
 
 void __init setup_arch(char **cmdline_p)
 {

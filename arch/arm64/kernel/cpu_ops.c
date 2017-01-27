@@ -22,10 +22,10 @@
 #include <linux/of.h>
 #include <linux/string.h>
 
+extern const struct cpu_operations smp_spin_table_ops;
+extern const struct cpu_operations cpu_psci_ops;
+
 const struct cpu_operations *cpu_ops[NR_CPUS];
-extern struct of_cpu_method __cpu_method_of_table[];
-static const struct of_cpu_method __cpu_method_of_table_sentinel
-	__used __section(__cpu_method_of_table_end);
 
 static const struct cpu_operations *supported_cpu_ops[] __initconst = {
 	&smp_spin_table_ops,
@@ -35,11 +35,14 @@ static const struct cpu_operations *supported_cpu_ops[] __initconst = {
 
 static const struct cpu_operations * __init cpu_get_ops(const char *name)
 {
-	struct of_cpu_method *m = __cpu_method_of_table;
+	const struct cpu_operations **ops = supported_cpu_ops;
 
-	for (; m->method; m++)
-		if (!strcmp(m->method, name))
-			return m->ops;
+	while (*ops) {
+		if (!strcmp(name, (*ops)->name))
+			return *ops;
+
+		ops++;
+	}
 
 	return NULL;
 }
