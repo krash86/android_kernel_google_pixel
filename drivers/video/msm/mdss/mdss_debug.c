@@ -39,6 +39,9 @@
 #define PANEL_CMD_MIN_TX_COUNT 2
 #define PANEL_DATA_NODE_LEN 80
 
+/* Hex number + whitespace */
+#define NEXT_VALUE_OFFSET 3
+
 #define INVALID_XIN_ID     0xFF
 
 static char panel_reg[2] = {DEFAULT_READ_PANEL_POWER_MODE_REG, 0x00};
@@ -129,7 +132,7 @@ static ssize_t panel_debug_base_reg_write(struct file *file,
 	struct mdss_debug_base *dbg = file->private_data;
 	char buf[PANEL_TX_MAX_BUF] = {0x0};
 	char reg[PANEL_TX_MAX_BUF] = {0x0};
-	u32 len = 0, step = 0, value = 0;
+	u32 len = 0, value = 0;
 	char *bufp;
 
 	struct mdss_data_type *mdata = mdss_res;
@@ -152,13 +155,22 @@ static ssize_t panel_debug_base_reg_write(struct file *file,
 	buf[count] = 0;	/* end of string */
 
 	bufp = buf;
-	while (sscanf(bufp, "%x%n", &value, &step) > 0) {
+	/* End of a hex value in given string */
+	bufp[NEXT_VALUE_OFFSET - 1] = 0;
+	while (kstrtouint(bufp, 16, &value) == 0) {
 		reg[len++] = value;
 		if (len >= PANEL_TX_MAX_BUF) {
 			pr_err("wrong input reg len\n");
 			return -EFAULT;
 		}
-		bufp += step;
+		bufp += NEXT_VALUE_OFFSET;
+		if ((bufp >= (buf + count)) || (bufp < buf)) {
+			pr_warn("%s,buffer out-of-bounds\n", __func__);
+			break;
+		}
+		/* End of a hex value in given string */
+		if ((bufp + NEXT_VALUE_OFFSET - 1) < (buf + count))
+			bufp[NEXT_VALUE_OFFSET - 1] = 0;
 	}
 	if (len < PANEL_CMD_MIN_TX_COUNT) {
 		pr_err("wrong input reg len\n");
@@ -203,6 +215,7 @@ static ssize_t panel_debug_base_reg_read(struct file *file,
 	struct mdss_panel_data *panel_data = ctl->panel_data;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = container_of(panel_data,
 					struct mdss_dsi_ctrl_pdata, panel_data);
+	int rc = -EFAULT;
 
 	if (!dbg)
 		return -ENODEV;
@@ -221,7 +234,8 @@ static ssize_t panel_debug_base_reg_read(struct file *file,
 
 	if (!rx_buf || !panel_reg_buf) {
 		pr_err("not enough memory to hold panel reg dump\n");
-		return -ENOMEM;
+		rc = -ENOMEM;
+		goto read_reg_fail;
 	}
 
 	if (mdata->debug_inf.debug_enable_clock)
@@ -258,8 +272,7 @@ static ssize_t panel_debug_base_reg_read(struct file *file,
 read_reg_fail:
 	kfree(rx_buf);
 	kfree(panel_reg_buf);
-	return -EFAULT;
-
+	return rc;
 }
 
 static const struct file_operations panel_off_fops = {

@@ -666,19 +666,14 @@ static int camera_v4l2_open(struct file *filep)
 				0, -1, &event);
 			rc = msm_post_event(&event, MSM_POST_EVT_TIMEOUT);
 			if (rc < 0) {
-				pr_err("%s : posting of NEW_SESSION event failed\n",
-					__func__);
-				pr_err("%s : Line %d rc %d\n",
-					__func__, __LINE__, rc);
+				pr_err("%s : NEW_SESSION event failed,rc %d\n",
+					__func__, rc);
 				goto post_fail;
 			}
 
 			rc = camera_check_event_status(&event);
-			if (rc < 0) {
-				pr_err("%s : checking event status fails Line %d rc %d\n",
-					__func__, __LINE__, rc);
+			if (rc < 0)
 				goto post_fail;
-			}
 		}
 		/* Enable power collapse latency */
 		msm_pm_qos_update_request(CAMERA_ENABLE_PC_LATENCY);

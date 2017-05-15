@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013, Sony Mobile Communications AB.
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1081,7 +1081,7 @@ static void msm_pinctrl_resume(void)
 	spin_lock_irqsave(&pctrl->lock, flags);
 	for_each_set_bit(i, pctrl->enabled_irqs, pctrl->chip.ngpio) {
 		g = &pctrl->soc->groups[i];
-		val = readl(pctrl->regs + g->intr_status_reg);
+		val = readl_relaxed(pctrl->regs + g->intr_status_reg);
 		if (val & BIT(g->intr_status_bit)) {
 			irq = irq_find_mapping(pctrl->chip.irqdomain, i);
 			desc = irq_to_desc(irq);
@@ -1089,9 +1089,8 @@ static void msm_pinctrl_resume(void)
 				name = "stray irq";
 			else if (desc->action && desc->action->name)
 				name = desc->action->name;
-			log_base_wakeup_reason(irq);
-			pr_warning("%s: %d triggered %s\n",
-				__func__, irq, name);
+
+			pr_warn("%s: %d triggered %s\n", __func__, irq, name);
 		}
 	}
 	spin_unlock_irqrestore(&pctrl->lock, flags);

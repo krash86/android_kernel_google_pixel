@@ -678,6 +678,9 @@ static int get_hfi_extradata_index(enum hal_extradata_id index)
 	case HAL_EXTRADATA_VPX_COLORSPACE:
 		ret = HFI_PROPERTY_PARAM_VDEC_VPX_COLORSPACE_EXTRADATA;
 		break;
+	case HAL_EXTRADATA_PQ_INFO:
+		ret = HFI_PROPERTY_PARAM_VENC_OVERRIDE_QP_EXTRADATA;
+		break;
 	default:
 		dprintk(VIDC_WARN, "Extradata index not found: %d\n", index);
 		break;
@@ -1454,6 +1457,12 @@ int create_pkt_cmd_session_set_property(
 		case HAL_RATE_CONTROL_VBR_VFR:
 			pkt->rg_property_data[1] = HFI_RATE_CONTROL_VBR_VFR;
 			break;
+		case HAL_RATE_CONTROL_MBR_CFR:
+			pkt->rg_property_data[1] = HFI_RATE_CONTROL_MBR_CFR;
+			break;
+		case HAL_RATE_CONTROL_MBR_VFR:
+			pkt->rg_property_data[1] = HFI_RATE_CONTROL_MBR_VFR;
+			break;
 		default:
 			dprintk(VIDC_ERR,
 					"Invalid Rate control setting: %pK\n",
@@ -1559,6 +1568,25 @@ int create_pkt_cmd_session_set_property(
 		 * pp = qp range for P-frames, etc. */
 		hfi->min_qp = min_qp | min_qp << 8 | min_qp << 16;
 		hfi->max_qp = max_qp | max_qp << 8 | max_qp << 16;
+		hfi->layer_id = hal_range->layer_id;
+
+		pkt->size += sizeof(u32) +
+			sizeof(struct hfi_quantization_range);
+		break;
+	}
+	case HAL_PARAM_VENC_SESSION_QP_RANGE_PACKED:
+	{
+		struct hfi_quantization_range *hfi;
+		struct hfi_quantization_range *hal_range =
+			(struct hfi_quantization_range *) pdata;
+
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_SESSION_QP_RANGE;
+		hfi = (struct hfi_quantization_range *)
+				&pkt->rg_property_data[1];
+
+		hfi->min_qp = hal_range->min_qp;
+		hfi->max_qp = hal_range->max_qp;
 		hfi->layer_id = hal_range->layer_id;
 
 		pkt->size += sizeof(u32) +
@@ -2115,6 +2143,14 @@ int create_pkt_cmd_session_set_property(
 		pkt->rg_property_data[0] =
 			HFI_PROPERTY_PARAM_VENC_VIDEO_SIGNAL_INFO;
 		pkt->size += sizeof(u32) + sizeof(*signal_info);
+		break;
+	}
+	case HAL_PARAM_VENC_H264_TRANSFORM_8x8:
+	{
+		create_pkt_enable(pkt->rg_property_data,
+			HFI_PROPERTY_PARAM_VENC_H264_8X8_TRANSFORM,
+			((struct hal_enable *)pdata)->enable);
+		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
 		break;
 	}
 	/* FOLLOWING PROPERTIES ARE NOT IMPLEMENTED IN CORE YET */

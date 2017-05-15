@@ -493,8 +493,9 @@ int map_and_register_buf(struct msm_vidc_inst *inst, struct v4l2_buffer *b)
 			goto exit;
 		}
 
-		same_fd_handle = get_same_fd_buffer(
-				inst, b->m.planes[i].reserved[0]);
+		same_fd_handle = i ? get_same_fd_buffer(
+				&inst->registeredbufs,
+				b->m.planes[i].reserved[0]) : NULL;
 
 		populate_buf_info(binfo, b, i);
 		if (same_fd_handle) {
@@ -914,7 +915,7 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 	if (rc)
 		return rc;
 
-	for (i = 0; i < b->length; i++) {
+	for (i = b->length - 1; i >= 0 ; i--) {
 		if (EXTRADATA_IDX(b->length) &&
 			i == EXTRADATA_IDX(b->length)) {
 			continue;

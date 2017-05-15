@@ -243,7 +243,11 @@ struct msm_vfe_core_ops {
 	void (*get_rdi_wm_mask)(struct vfe_device *vfe_dev,
 		uint32_t *rdi_wm_mask);
 	bool (*is_module_cfg_lock_needed)(uint32_t reg_offset);
+	int (*ahb_clk_cfg)(struct vfe_device *vfe_dev,
+			struct msm_isp_ahb_clk_cfg *ahb_cfg);
 	void (*set_halt_restart_mask)(struct vfe_device *vfe_dev);
+	int (*start_fetch_eng_multi_pass)(struct vfe_device *vfe_dev,
+		void *arg);
 };
 struct msm_vfe_stats_ops {
 	int (*get_stats_idx)(enum msm_isp_stats_type stats_type);
@@ -281,6 +285,8 @@ struct msm_vfe_stats_ops {
 	uint32_t (*get_pingpong_status)(struct vfe_device *vfe_dev);
 
 	void (*update_cgc_override)(struct vfe_device *vfe_dev,
+		uint32_t stats_mask, uint8_t enable);
+	void (*enable_stats_wm)(struct vfe_device *vfe_dev,
 		uint32_t stats_mask, uint8_t enable);
 };
 
@@ -518,6 +524,7 @@ struct msm_vfe_axi_shared_data {
 struct msm_vfe_stats_hardware_info {
 	uint32_t stats_capability_mask;
 	uint8_t *stats_ping_pong_offset;
+	uint8_t *stats_wm_index;
 	uint8_t num_stats_type;
 	uint8_t num_stats_comp_mask;
 };
