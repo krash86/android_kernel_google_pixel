@@ -2055,7 +2055,6 @@ static void cpuset_bind(struct cgroup_subsys_state *root_css)
 	mutex_unlock(&cpuset_mutex);
 }
 
-
 static int cpuset_allow_attach(struct cgroup_subsys_state *css,
 			       struct cgroup_taskset *tset)
 {
@@ -2066,7 +2065,7 @@ static int cpuset_allow_attach(struct cgroup_subsys_state *css,
 		tcred = __task_cred(task);
 
 		if ((current != task) && !capable(CAP_SYS_ADMIN) &&
-		    cred->euid.val != tcred->uid.val && cred->euid.val != tcred->suid.val)
+		     cred->euid.val != tcred->uid.val && cred->euid.val != tcred->suid.val)
 			return -EACCES;
 	}
 
